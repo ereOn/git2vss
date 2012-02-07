@@ -80,7 +80,7 @@ def main():
     )
 
     push_parser.add_argument('ref', help='The ref to copy the files from.', nargs='?', default=None)
-    push_parser.add_argument('--vss-project-path,p', help='The path to the VSS project.', default=None)
+    push_parser.add_argument('--vss-project-path', help='The path to the VSS project.', default=None)
     push_parser.set_defaults(func=git_vss_push)
 
     pull_parser = command_parser.add_parser(
