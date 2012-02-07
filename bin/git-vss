@@ -35,6 +35,7 @@ def git_vss_push(args):
 
     git2vss.push(
         git_repo=args.git_repo,
+        ref=args.ref,
         vss_project_path=args.vss_project_path,
     )
 
@@ -78,7 +79,7 @@ def main():
         help='Push the files to the VSS repository',
     )
 
-    push_parser.add_argument('ref', help='The ref to copy the files from.', default=None)
+    push_parser.add_argument('ref', help='The ref to copy the files from.', nargs='?', default=None)
     push_parser.add_argument('--vss-project-path,p', help='The path to the VSS project.', default=None)
     push_parser.set_defaults(func=git_vss_push)
 

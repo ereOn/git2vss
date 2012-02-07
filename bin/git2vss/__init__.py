@@ -77,6 +77,44 @@ def __copytree(src, dst):
                 shutil.copy(src_file, dst_file)
                 os.chmod(dst_file, stat.S_IWRITE)
 
+def push(git_repo, ref=None, repository_path=None, vss_project_path=None, ss_path=None):
+    """
+    Performs a push on the VSS repository.
+    """
+
+    if git_repo.is_dirty():
+        raise Git2VSSInvalidGitStatusError('Working directory is dirty. Refusing to push.', git_repo)
+
+    vss_repo = __get_vss_instance(git_repo=git_repo, repository_path=repository_path, ss_path=ss_path)
+    vss_project_path = __get_vss_project_path(git_repo, vss_project_path)
+
+    temp_dir = tempfile.mkdtemp()
+
+    try:
+        vss_repo.checkout(vss_project_path, recursive=True, get_folder=temp_dir, output='error')
+
+        # Lets export the git repository
+        temp_git_repo_archive = tempfile.TemporaryFile()
+        git_repo.archive(temp_git_repo_archive)
+
+        # We compare the folders
+
+        # We first commit the updated files
+
+        try:
+            # We checkin the files back
+            vss_repo.checkin(vss_project_path, recursive=True, get_folder=temp_dir, output='error', comment_no_text=True)
+        except Exception, ex:
+            # Something went wrong: we undo the checkout and propagate the exception
+            vss_repo.undo_checkout(vss_project_path, recursive=True, get_folder=temp_dir, output='error')
+            raise ex
+
+        # We then add the new files
+
+        # We finally remove the deleted files
+    finally:
+        __rmtree(temp_dir)
+
 def pull(git_repo, repository_path=None, vss_project_path=None, ss_path=None):
     """
     Performs a pull on the VSS repository.
