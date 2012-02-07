@@ -10,6 +10,19 @@ import stat
 
 from error import Git2VSSMissingOptionError, Git2VSSInvalidGitStatusError
 
+def __git_python_unescape(value):
+    """
+    Fixes a bug in GitPython which doesn't unescape values.
+
+    Return value unescaped.
+
+    """
+
+    value = value.replace('\\\\', '\\')
+    value = value.replace('\\"', '"')
+
+    return value
+
 def __get_vss_instance(git_repo, repository_path=None, ss_path=None):
     """
     Get the VSS instance according to the specified parameters.
@@ -20,6 +33,8 @@ def __get_vss_instance(git_repo, repository_path=None, ss_path=None):
     if repository_path is None:
         if config.has_option('git2vss', 'repository-path'):
             repository_path = config.get_value('git2vss', 'repository-path')
+            # TODO: Remove the line below when the bug in GitPython is fixed.
+            repository_path = __git_python_unescape(repository_path)
         else:
             raise Git2VSSMissingOptionError('git2vss.repository-path', git_repo)
 
@@ -35,6 +50,8 @@ def __get_vss_project_path(git_repo, vss_project_path=None):
     if vss_project_path is None:
         if config.has_option('git2vss', 'vss-project-path'):
             vss_project_path = config.get_value('git2vss', 'vss-project-path')
+            # TODO: Remove the line below when the bug in GitPython is fixed.
+            vss_project_path = __git_python_unescape(vss_project_path)
         else:
             raise Git2VSSMissingOptionError('git2vss.vss-project-path', git_repo)
 
