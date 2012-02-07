@@ -10,9 +10,9 @@ import git
 
 import git2vss
 
-def check_missing_options(func):
+def check_errors(func):
     """
-    Check for the missing options.
+    Check for errors.
     """
 
     def decorated_func(*args):
@@ -21,10 +21,13 @@ def check_missing_options(func):
         except git2vss.Git2VSSMissingOptionError, ex:
             sys.stderr.write('fatal: %s\n\nHave you done a \'git vss config\' yet ?' % ex.message)
             return 2
+        except git2vss.Git2VSSInvalidGitStatusError, ex:
+            sys.stderr.write('fatal: %s\n' % ex.message)
+            return 3
 
     return decorated_func
 
-@check_missing_options
+@check_errors
 def git_vss_push(args):
     """
     Performs git vss push logic.
@@ -36,7 +39,7 @@ def git_vss_push(args):
     )
 
 
-@check_missing_options
+@check_errors
 def git_vss_pull(args):
     """
     Performs git vss pull logic.
