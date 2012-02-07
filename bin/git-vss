@@ -6,6 +6,7 @@ A Git command to interact with Microsoft Visual SourceSafe repositories.
 
 import sys
 import argparse
+import git
 
 import git2vss
 
@@ -18,8 +19,8 @@ def check_missing_options(func):
         try:
             return func(*args)
         except git2vss.Git2VSSMissingOptionError, ex:
-            sys.stderr.write('Error: %s\n\nHave you done a \'git vss configure\' yet ?' % ex.message)
-            return 1
+            sys.stderr.write('fatal: %s\n\nHave you done a \'git vss config\' yet ?' % ex.message)
+            return 2
 
     return decorated_func
 
@@ -29,22 +30,41 @@ def git_vss_push(args):
     Performs git vss push logic.
     """
 
+    git2vss.push(
+        git_repo=args.git_repo,
+        vss_project_path=args.vss_project_path,
+    )
+
+
 @check_missing_options
 def git_vss_pull(args):
     """
     Performs git vss pull logic.
     """
 
-    return git2vss.pull()
+    git2vss.pull(
+        git_repo=args.git_repo,
+        vss_project_path=args.vss_project_path,
+    )
+
+    return 0
 
 def main():
     """
     The script entry point.
     """
 
+    try:
+        git_repo = git.Repo()
+    except git.exc.InvalidGitRepositoryError:
+        sys.stderr.write('fatal: Not a git repository (or any of the parent directories): .git')
+        return 1
+
     parser = argparse.ArgumentParser(
         usage='git vss <command> [options]',
     )
+
+    parser.set_defaults(git_repo=git_repo)
 
     command_parser = parser.add_subparsers(
         help='The command to execute',
@@ -56,13 +76,15 @@ def main():
     )
 
     push_parser.add_argument('ref', help='The ref to copy the files from.', default=None)
+    push_parser.add_argument('--vss-project-path,p', help='The path to the VSS project.', default=None)
     push_parser.set_defaults(func=git_vss_push)
 
     pull_parser = command_parser.add_parser(
         'pull',
-        help='Pull the files to the VSS repository',
+        help='Pull the files from the VSS repository',
     )
 
+    pull_parser.add_argument('--vss-project-path', help='The path to the VSS project.', default=None)
     pull_parser.set_defaults(func=git_vss_pull)
 
     args = parser.parse_args()

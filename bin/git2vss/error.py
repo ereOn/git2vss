@@ -26,7 +26,7 @@ class Git2VSSMissingOptionError(Git2VSSError):
         Create a missing option error for the specified option.
         """
 
-        super(Git2VSSMissingOptionError, self).__init__('Required option %s was not found' % repr(option), git_repo)
+        super(Git2VSSMissingOptionError, self).__init__('Required option %s was not found.' % repr(option), git_repo)
 
         self.option = option
 
