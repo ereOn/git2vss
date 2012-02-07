@@ -4,6 +4,9 @@ git2vss utility functions.
 
 import vss
 import tempfile
+import shutil
+import os
+import stat
 
 from error import Git2VSSMissingOptionError, Git2VSSInvalidGitStatusError
 
