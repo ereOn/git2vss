@@ -30,3 +30,14 @@ class Git2VSSMissingOptionError(Git2VSSError):
 
         self.option = option
 
+class Git2VSSInvalidGitStatusError(Git2VSSError):
+    """
+    A git2vss invalid git status error.
+    """
+
+    def __init__(self, msg, git_repo):
+        """
+        Create a invalid git status error.
+        """
+
+        super(Git2VSSInvalidGitStatusError, self).__init__(msg, git_repo)

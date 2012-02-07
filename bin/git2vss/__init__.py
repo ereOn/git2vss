@@ -4,7 +4,7 @@ git2vss utility functions.
 
 import vss
 
-from error import Git2VSSMissingOptionError
+from error import Git2VSSMissingOptionError, Git2VSSInvalidGitStatusError
 
 def __get_vss_instance(git_repo, repository_path=None, ss_path=None):
     """
@@ -41,6 +41,7 @@ def pull(git_repo, repository_path=None, vss_project_path=None, ss_path=None):
     Performs a pull on the VSS repository.
     """
 
+    if git_repo.is_dirty():
+        raise Git2VSSInvalidGitStatusError('Working directory is dirty. Refusing to pull.', git_repo)
+
     vss_repo = __get_vss_instance(git_repo=git_repo, repository_path=repository_path, ss_path=ss_path)
-
-
