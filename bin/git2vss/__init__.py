@@ -111,17 +111,17 @@ def push(git_repo, ref=None, repository_path=None, vss_project_path=None, ss_pat
     temp_dir = tempfile.mkdtemp()
 
     try:
-        vss_repo.checkout(vss_project_path, recursive=True, get_folder=temp_dir, output='error')
-
         # Lets export the git repository
         temp_git_repo_archive = tempfile.TemporaryFile()
         git_repo.archive(temp_git_repo_archive)
 
-        # We compare the folders
-
-        # We first commit the updated files
+        vss_repo.checkout(vss_project_path, recursive=True, get_folder=temp_dir, output='error')
 
         try:
+            # We compare the folders
+
+            # We first commit the updated files
+
             # We checkin the files back
             vss_repo.checkin(vss_project_path, recursive=True, get_folder=temp_dir, output='error', comment_no_text=True)
         except Exception, ex:
