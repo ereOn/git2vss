@@ -174,7 +174,7 @@ def push(git_repo, ref=None, repository_path=None, vss_project_path=None, ss_pat
     finally:
         __rmtree(vss_temp_dir)
 
-    if 'VSS-HEAD' in [str(tag) for tag in git_repo.tags]:
+    if 'VSS-HEAD' in git_repo.tags:
         git_repo.delete_tag('VSS-HEAD')
 
     print 'Push to VSS done. VSS-HEAD is now at %s.' % (git_repo.create_tag('VSS-HEAD').commit.hexsha)
@@ -187,9 +187,12 @@ def pull(git_repo, repository_path=None, vss_project_path=None, ss_path=None):
     if git_repo.is_dirty():
         raise Git2VSSInvalidGitStatusError('Working directory is dirty. Refusing to pull.', git_repo)
 
+    if 'vss-merge' in git_repo.branches:
+        raise Git2VSSInvalidGitStatusError('The vss-merge branch still exists. Refusing to pull.', git_repo)
+
     git_repo_head = str(git_repo.head.ref)
 
-    if 'VSS-HEAD' in [str(tag) for tag in git_repo.tags]:
+    if 'VSS-HEAD' in git_repo.tags:
         git_repo.git.checkout('-b', 'vss-merge', 'VSS-HEAD')
     else:
         git_repo.git.checkout('-b', 'vss-merge', 'HEAD')
@@ -238,15 +241,20 @@ def pull(git_repo, repository_path=None, vss_project_path=None, ss_path=None):
         git_repo.git.commit('-m', 'VSS pull from %s:%s' % (vss_repo.repository_path, vss_project_path))
         print 'Commited changes from upstream.'
 
-    except GitCommandError, ex:
+    except GitCommandError:
         print 'No changes from upstream: nothing to commit.'
 
     finally:
         git_repo.git.checkout(git_repo_head)
-        git_repo.git.merge('vss-merge')
-        git_repo.git.branch('-d', 'vss-merge')
 
-    if 'VSS-HEAD' in [str(tag) for tag in git_repo.tags]:
+        try:
+            git_repo.git.merge('vss-merge')
+            git_repo.git.branch('-d', 'vss-merge')
+
+        except GitCommandError:
+            print 'Automatic merge failed. Please fix it and delete "vss-merge" you are done.'
+
+    if 'VSS-HEAD' in git_repo.tags:
         git_repo.delete_tag('VSS-HEAD')
 
     print 'Pull from VSS done. VSS-HEAD is now at %s.' % (git_repo.create_tag('VSS-HEAD').commit.hexsha)
