@@ -142,7 +142,16 @@ def push(git_repo, ref=None, repository_path=None, vss_project_path=None, ss_pat
         git_temp_dir = tempfile.mkdtemp()
 
         try:
-            git_repo.git.checkout_index('-f', '-a', '--prefix=' + git_temp_dir + '/')
+            current_head = str(git_repo.head.commit)
+
+            if ref:
+                git_repo.git.checkout(ref)
+
+            try:
+                git_repo.git.checkout_index('-f', '-a', '--prefix=' + git_temp_dir + '/')
+            finally:
+                if ref:
+                    git_repo.git.checkout(current_head)
 
             vss_repo.checkout(vss_project_path, recursive=True, get_folder=vss_temp_dir, output='error')
 
