@@ -9,6 +9,7 @@ import os
 import stat
 
 from error import Git2VSSMissingOptionError, Git2VSSInvalidGitStatusError
+from git import GitCommandError
 
 def __git_python_unescape(value):
     """
@@ -67,35 +68,6 @@ def __rmtree(path):
         func(path)
 
     shutil.rmtree(path, onerror=force_delete)
-
-def __copytree(src, dst):
-    """
-    Recursively copy a tree from src to dst.
-    """
-
-    for root, dirs, files in os.walk(src):
-        root = os.path.relpath(root, src)
-
-        for dname in dirs:
-            dst_dir = os.path.join(dst, root, dname)
-            if os.path.isdir(dst_dir):
-                pass
-            else:
-                if os.path.isfile(dst_dir):
-                    os.remove(dst_dir)
-
-                os.mkdir(dst_dir)
-
-        for fname in files:
-            if not os.path.splitext(fname)[1] in ('.scc'):
-                src_file = os.path.join(src, root, fname)
-                dst_file = os.path.join(dst, root, fname)
-
-                if os.path.isfile(dst_file):
-                    os.chmod(dst_file, stat.S_IWRITE)
-
-                shutil.copy(src_file, dst_file)
-                os.chmod(dst_file, stat.S_IWRITE)
 
 def __scan_directory(path):
     """
@@ -213,10 +185,50 @@ def pull(git_repo, repository_path=None, vss_project_path=None, ss_path=None):
     vss_repo = __get_vss_instance(git_repo=git_repo, repository_path=repository_path, ss_path=ss_path)
     vss_project_path = __get_vss_project_path(git_repo, vss_project_path)
 
-    temp_dir = tempfile.mkdtemp()
+    vss_temp_dir = tempfile.mkdtemp()
 
     try:
-        vss_repo.get(vss_project_path, recursive=True, get_folder=temp_dir, output='error', ignore='all')
-        __copytree(temp_dir, git_repo.working_dir)
+        vss_repo.get(vss_project_path, recursive=True, get_folder=vss_temp_dir, output='error', ignore='all')
+
+        git_temp_dir = tempfile.mkdtemp()
+
+        try:
+            git_repo.git.checkout_index('-f', '-a', '--prefix=' + git_temp_dir + '/')
+
+            # We compare the folders
+            vss_dirs, vss_files = __scan_directory(vss_temp_dir)
+            git_dirs, git_files = __scan_directory(git_temp_dir)
+
+        finally:
+            __rmtree(git_temp_dir)
+
+        deleted_dirs, current_dirs, new_dirs = __diff(git_dirs, vss_dirs)
+        deleted_files, current_files, new_files = __diff(git_files, vss_files)
+
+        # Add the updated files to the index
+        for fname in current_files + new_files:
+            dst_file = os.path.join(git_repo.working_dir, fname)
+            shutil.copyfile(os.path.join(vss_temp_dir, fname), dst_file)
+            os.chmod(dst_file, stat.S_IWRITE)
+            git_repo.git.add(fname)
+
+        # Remove the deleted files from the index
+        for fname in deleted_files:
+            dst_file = os.path.join(git_repo.working_dir, fname)
+            os.chmod(dst_file, stat.S_IWRITE)
+            os.remove(dst_file)
+            git_repo.git.rm(fname)
+
+        try:
+            print git_repo.git.commit('-m', 'VSS pull from %s:%s' % (vss_repo.repository_path, vss_project_path))
+
+            if 'VSS-HEAD' in [str(tag) for tag in git_repo.tags]:
+                git_repo.delete_tag('VSS-HEAD')
+
+            print 'Pull done. VSS-HEAD is now at %s.' % (git_repo.create_tag('VSS-HEAD').commit.hexsha)
+
+        except GitCommandError, ex:
+            print 'No changes from upstream: nothing to commit.'
+
     finally:
-        __rmtree(temp_dir)
+        __rmtree(vss_temp_dir)
